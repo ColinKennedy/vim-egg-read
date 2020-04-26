@@ -9,6 +9,8 @@ let s:PATH_EXPRESSIONS = ['\(.*egg\)\(.*\)']
 
 
 function! OpenEggPath(path)
+    let l:parent_directory = getcwd()
+
     for expression in s:PATH_EXPRESSIONS
         let l:names = matchlist(a:path, expression)
 
@@ -16,15 +18,19 @@ function! OpenEggPath(path)
             continue
         endif
 
-        let zip_file_name = l:names[1]
-        let inner_path = l:names[2]
+        let l:zip_file_name = l:names[1]
+        let l:inner_path = l:names[2]
+
+        if l:zip_file_name !~ "^" . l:parent_directory
+            let l:zip_file_name = l:parent_directory . "/" . l:zip_file_name
+        endif
 
         " Before: call zip#Read("/home/username/foo.egg/test.py", "r")
         " After: call zip#Read("zipfile:/home/username/foo.egg::test.py", "r")
         "
-        let stripped_inner_path = substitute(inner_path, "^/*", "", "")
-        " echoerr 'Opening using call zip#Read("zipfile:' . zip_file_name . "::" . stripped_inner_path. '", "r")'
-        let full_path = "zipfile:" . zip_file_name . "::" . stripped_inner_path
+        let stripped_inner_path = substitute(l:inner_path, "^/*", "", "")
+        " echoerr 'Opening using call zip#Read("zipfile:' . l:zip_file_name . "::" . stripped_inner_path. '", "r")'
+        let full_path = "zipfile:" . l:zip_file_name . "::" . stripped_inner_path
 
         " Rename the current buffer to something that Vim's zip plugin can understand
         execute ":file " . full_path
@@ -38,3 +44,4 @@ endfunction
 autocmd! BufReadPre,FileReadPre	*.egg/* set bin
 autocmd! BufReadPost,FileReadPost	*.egg/* set nobin
 autocmd! BufReadCmd *.egg/* call OpenEggPath(expand("<amatch>"))
+autocmd! BufWriteCmd *.egg/* call zip#Write(expand("<amatch>"))
