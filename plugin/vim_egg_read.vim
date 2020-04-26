@@ -1,6 +1,6 @@
 " Avoid installing twice or when in unsupported Vim version.
 if exists('g:loaded_vim_egg_read')
-	finish
+    finish
 endif
 
 let g:loaded_vim_egg_read = 1
