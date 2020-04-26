@@ -8,7 +8,7 @@ let g:loaded_vim_egg_read = 1
 let s:PATH_EXPRESSIONS = ['\(.*egg\)\(.*\)']
 
 
-function! OpenEggPath(path)
+function! s:OpenEggPath(path)
     let l:parent_directory = getcwd()
 
     for expression in s:PATH_EXPRESSIONS
@@ -41,7 +41,7 @@ function! OpenEggPath(path)
 endfunction
 
 
-autocmd! BufReadPre,FileReadPre	*.egg/* set bin
-autocmd! BufReadPost,FileReadPost	*.egg/* set nobin
-autocmd! BufReadCmd *.egg/* call OpenEggPath(expand("<amatch>"))
+autocmd! BufReadCmd *.egg/* call s:OpenEggPath(expand("<amatch>"))
+autocmd! BufReadPost,FileReadPost *.egg/* set nobin
+autocmd! BufReadPre,FileReadPre *.egg/* set bin
 autocmd! BufWriteCmd *.egg/* call zip#Write(expand("<amatch>"))
