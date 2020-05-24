@@ -8,8 +8,31 @@ let g:loaded_vim_egg_read = 1
 let s:PATH_EXPRESSIONS = ['\(.*egg\)\(.*\)']
 
 
-function! s:OpenEggPath(path)
+" Just because a path is "/foo/bar.egg/thing.py" doesn't mean "bar.egg"
+" is definitely an egg file. This function double-checks it.
+"
+function! s:needs_to_be_uncompressed(path)
+    let egg_path = substitute(a:path, "\\(.*\\.egg\\).*" , "\\1", "")
+
+    return filereadable(egg_path)
+endfunction
+
+
+function! s:open_egg_path(path)
     let l:parent_directory = getcwd()
+
+    if !s:needs_to_be_uncompressed(a:path)
+        " Reference: https://stackoverflow.com/a/57675675
+        "
+        " Edit the file
+        "
+        execute "e" a:path
+
+        " Run the remaining autocommands for the file
+        execute "doautocmd BufReadPost" a:path
+
+        return
+    endif
 
     for expression in s:PATH_EXPRESSIONS
         let l:names = matchlist(a:path, expression)
@@ -41,7 +64,39 @@ function! s:OpenEggPath(path)
 endfunction
 
 
-autocmd! BufReadCmd *.egg/* call s:OpenEggPath(expand("<amatch>"))
-autocmd! BufReadPost,FileReadPost *.egg/* set nobin
-autocmd! BufReadPre,FileReadPre *.egg/* set bin
-autocmd! BufWriteCmd *.egg/* call zip#Write(expand("<amatch>"))
+function! s:write_egg_path(path)
+    if !s:needs_to_be_uncompressed(a:path)
+        " Reference: https://stackoverflow.com/a/57675675
+        "
+        " Edit the file
+        "
+        execute "w" a:path
+
+        " Run the remaining autocommands for the file
+        execute "doautocmd BufWritePost" a:path
+
+        return
+    endif
+
+    call zip#Write(a:path)
+endfunction
+
+
+function! s:set_pre(path)
+    if s:needs_to_be_uncompressed(a:path)
+        set bin
+    endif
+endfunction
+
+
+function! s:set_post(path)
+    if s:needs_to_be_uncompressed(a:path)
+        set nobin
+    endif
+endfunction
+
+
+autocmd! BufReadCmd *.egg/* call s:open_egg_path(expand("<amatch>"))
+autocmd! BufReadPost,FileReadPost *.egg/* call s:set_post(expand("<amatch>"))
+autocmd! BufReadPre,FileReadPre *.egg/* call s:set_pre(expand("<amatch>"))
+autocmd! BufWriteCmd *.egg/* call s:write_egg_path(expand("<amatch>"))
